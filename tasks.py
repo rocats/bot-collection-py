@@ -35,7 +35,10 @@ def ok(update: Update, context: CallbackContext, name: str = None):
     if name is not None:
         update.message.reply_text(f'{name}: {text}')
     else:
-        update.message.reply_text(text)
+        chat_id = update.message.chat_id
+        reply_to_message_id = update.message.reply_to_message.message_id \
+            if update.message.reply_to_message else None
+        context.bot.send_message(chat_id, text=text, reply_to_message_id=reply_to_message_id)
 
 
 def study(update: Update, context: CallbackContext):
