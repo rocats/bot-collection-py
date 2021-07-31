@@ -63,6 +63,7 @@ def question_inline(update: Update, context: CallbackContext):
             thumb_url=asset_url+'shuibiao.jpg'
         )
     ]
+    update.inline_query.answer(result)
 
 
 def main():
