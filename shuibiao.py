@@ -64,7 +64,7 @@ def question_inline(update: Update, context: CallbackContext):
             id=str(uuid.uuid4()),
             title='我们建议你配合调查',
             input_message_content=InputTextMessageContent(text),
-            thumb_url=asset_url+'shuibiao.jpg'
+            thumb_url=f'{asset_url}/shuibiao.jpg'
         )
     ]
     update.inline_query.answer(result, cache_time=0)
