@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+jobs:
+  check:
+    if: "!(github.event_name == 'push' && contains(github.event.head_commit.message, '[skip ci]'))"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Lint with flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+
+  generate-matrix:
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v2
+      - name: Generate matrix
+        id: gen-matrix
+        run: echo "::set-output name=botname::$(ls *.py | cut -d '.' -f1 | jq -R . | jq -cs .)"
+    outputs:
+      botname: ${{ steps.gen-matrix.outputs.botname }}
+
+  build:
+    runs-on: ubuntu-latest
+    needs: generate-matrix
+    strategy:
+      matrix:
+        botname: ${{ fromJson(needs.generate-matrix.outputs.botname) }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build Docker images
+        run: |
+          docker build . -t ${{ matrix.botname }} --build-arg bot=${{ matrix.botname }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: "github.ref == 'refs/heads/master'"
+    steps:
+      - uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd bot-collection-py
+            git pull
+            docker-compose up -d --build
