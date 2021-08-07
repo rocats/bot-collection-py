@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import base64
+import binascii
 import logging
 import os
 import random
@@ -11,14 +13,30 @@ from telegram.ext.callbackcontext import CallbackContext
 from telegram.ext import (Updater, CommandHandler, InlineQueryHandler)
 
 token = os.getenv('TELEGRAM_APITOKEN')
-asset_url = os.getenv('ASSET_URL', 'https://raw.githubusercontent.com/rocats/bot-collection-py/master/asset/')
+asset_url = os.getenv('ASSET_URL', 'https://raw.githubusercontent.com/rocats/bot-collection-py/master/asset/shuibiao')
+questions_file = os.getenv('QUESTIONS_PATH',
+                           os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                        'asset', 'shuibiao', 'shuibiao.txt'))
 bot = Bot(token=token)
 
+questions_list = []
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+
+
+def init():
+    logger.info(f'Get question list from {questions_file}')
+    with open(questions_file) as f:
+        for line in f:
+            try:
+                q = base64.standard_b64decode(line).decode()
+                logger.info('Load a question: %s', q)
+                questions_list.append(q)
+            except binascii.Error:
+                logger.warning('Load question error from \'%s\'', line)
 
 
 def error(update: Update, context: CallbackContext):
@@ -31,41 +49,16 @@ def start(update: Update, context: CallbackContext):
     update.message.reply_text('跟我们走一趟')
 
 
-def random_question():
-    return random.choice((
-        "你发这些什么目的？",
-        "谁指使你的？",
-        "你的动机是什么？",
-        "你取得有关部门许可了吗？",
-        "法律法规容许你发了吗？",
-        "你背后是谁？",
-        "发这些想干什么？",
-        "你想颠覆什么？",
-        "你要破坏什么？",
-        "你没有犯罪你怕什么？",
-        "坦白从宽，抗拒从严！",
-        "我劝你老实交代！",
-        "你最好收回！",
-        "你在影射谁？",
-        "你在影射什么？",
-        "互联网不是法外之地！",
-        "你的言论很危险！",
-        "寻衅滋事？",
-        "我们要移交法办！",
-        "你不相信政府？"
-    ))
-
-
 def question(update: Update, context: CallbackContext):
     chat_id = update.message.chat_id
     reply_to_message_id = update.message.reply_to_message.message_id \
         if update.message.reply_to_message else None
-    text = random_question()
+    text = random.choice(questions_list)
     context.bot.send_message(chat_id, text=text, reply_to_message_id=reply_to_message_id)
 
 
 def question_inline(update: Update, context: CallbackContext):
-    text = random_question()
+    text = random.choice(questions_list)
     result = [
         InlineQueryResultArticle(
             id=str(uuid.uuid4()),
@@ -99,4 +92,5 @@ def main():
 
 
 if __name__ == '__main__':
+    init()
     main()
