@@ -1,5 +1,6 @@
 .idea
 .vscode
 .env
+data
 venv
 __pycache__

@@ -10,10 +10,11 @@ import uuid
 
 from telegram import Bot, Update, InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext.callbackcontext import CallbackContext
-from telegram.ext import (Updater, CommandHandler, InlineQueryHandler)
+from telegram.ext import Updater, CommandHandler, InlineQueryHandler, PicklePersistence
 
 token = os.getenv('TELEGRAM_APITOKEN')
 asset_url = os.getenv('ASSET_URL', 'https://raw.githubusercontent.com/rocats/bot-collection-py/master/asset/shuibiao')
+data_path = os.getenv('DATA_PATH', os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data', 'shuibiao'))
 questions_file = os.getenv('QUESTIONS_PATH',
                            os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                         'asset', 'shuibiao', 'shuibiao.txt'))
@@ -54,6 +55,7 @@ def question(update: Update, context: CallbackContext):
     reply_to_message_id = update.message.reply_to_message.message_id \
         if update.message.reply_to_message else None
     text = random.choice(questions_list)
+    context.bot_data[text] = context.bot_data.get(text, 0) + 1
     context.bot.send_message(chat_id, text=text, reply_to_message_id=reply_to_message_id)
 
 
@@ -63,15 +65,28 @@ def question_inline(update: Update, context: CallbackContext):
         InlineQueryResultArticle(
             id=str(uuid.uuid4()),
             title='我们建议你配合调查',
+            description=text,
             input_message_content=InputTextMessageContent(text),
             thumb_url=f'{asset_url}/shuibiao.jpg'
         )
     ]
+    context.bot_data[text] = context.bot_data.get(text, 0) + 1
     update.inline_query.answer(result, cache_time=0)
 
 
+def shuibiaostats(update: Update, context: CallbackContext):
+    total = sum(context.bot_data.values())
+    total_items = len(context.bot_data)
+    result = f'据不完全统计，目前全网累计查水表次数: {total} 次。其中排名前 3 的语句为：\n'
+    top3 = sorted(list((-v, k) for k, v in context.bot_data.items()))[:min(3, total_items)]
+    for count, text in top3:
+        result += f"{text}: {-count} 次\n"
+    update.message.reply_text(result)
+
+
 def main():
-    updater = Updater(token, use_context=True)
+    persistence = PicklePersistence(filename=data_path)
+    updater = Updater(token, use_context=True, persistence=persistence)
     dp = updater.dispatcher
 
     # log all errors
@@ -80,6 +95,7 @@ def main():
     # add handler
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("question", question))
+    dp.add_handler(CommandHandler("shuibiaostats", shuibiaostats))
     dp.add_handler(InlineQueryHandler(question_inline))
 
     # Start the Bot
