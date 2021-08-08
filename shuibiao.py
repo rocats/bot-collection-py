@@ -3,14 +3,14 @@
 
 import base64
 import binascii
+import hashlib
 import logging
 import os
 import random
-import uuid
 
-from telegram import Bot, Update, InlineQueryResultArticle, InputTextMessageContent
+from telegram import Bot, Update, InlineQueryResultArticle, InputTextMessageContent, InlineQueryResult
 from telegram.ext.callbackcontext import CallbackContext
-from telegram.ext import Updater, CommandHandler, InlineQueryHandler, PicklePersistence
+from telegram.ext import Updater, CommandHandler, InlineQueryHandler, ChosenInlineResultHandler, PicklePersistence
 
 token = os.getenv('TELEGRAM_APITOKEN')
 asset_url = os.getenv('ASSET_URL', 'https://raw.githubusercontent.com/rocats/bot-collection-py/master/asset/shuibiao')
@@ -21,6 +21,7 @@ questions_file = os.getenv('QUESTIONS_PATH',
 bot = Bot(token=token)
 
 questions_list = []
+questions_dict = {}
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -36,6 +37,7 @@ def init():
                 q = base64.standard_b64decode(line).decode()
                 logger.info('Load a question: %s', q)
                 questions_list.append(q)
+                questions_dict[hashlib.md5(q.encode()).hexdigest()] = q
             except binascii.Error:
                 logger.warning('Load question error from \'%s\'', line)
 
@@ -60,18 +62,23 @@ def question(update: Update, context: CallbackContext):
 
 
 def question_inline(update: Update, context: CallbackContext):
-    text = random.choice(questions_list)
+    texts = random.sample(questions_list, 3)
     result = [
         InlineQueryResultArticle(
-            id=str(uuid.uuid4()),
+            id=hashlib.md5(text.encode()).hexdigest(),
             title='我们建议你配合调查',
             description=text,
             input_message_content=InputTextMessageContent(text),
             thumb_url=f'{asset_url}/shuibiao.jpg'
         )
+        for text in texts
     ]
-    context.bot_data[text] = context.bot_data.get(text, 0) + 1
     update.inline_query.answer(result, cache_time=0)
+
+
+def chosen_result(update: Update, context: CallbackContext):
+    text = questions_dict[update.chosen_inline_result.result_id]
+    context.bot_data[text] = context.bot_data.get(text, 0) + 1
 
 
 def shuibiaostats(update: Update, context: CallbackContext):
@@ -97,7 +104,7 @@ def main():
     dp.add_handler(CommandHandler("question", question))
     dp.add_handler(CommandHandler("shuibiaostats", shuibiaostats))
     dp.add_handler(InlineQueryHandler(question_inline))
-
+    dp.add_handler(ChosenInlineResultHandler(chosen_result))
     # Start the Bot
     updater.start_polling()
 
