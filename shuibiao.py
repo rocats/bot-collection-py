@@ -8,9 +8,11 @@ import logging
 import os
 import random
 
-from telegram import Bot, Update, InlineQueryResultArticle, InputTextMessageContent, InlineQueryResult
+from telegram import Bot, Update, InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext.callbackcontext import CallbackContext
-from telegram.ext import Updater, CommandHandler, InlineQueryHandler, ChosenInlineResultHandler, PicklePersistence
+from telegram.ext import Updater, CommandHandler, \
+                        InlineQueryHandler, ChosenInlineResultHandler,\
+                        PicklePersistence
 
 token = os.getenv('TELEGRAM_APITOKEN')
 asset_url = os.getenv('ASSET_URL', 'https://raw.githubusercontent.com/rocats/bot-collection-py/master/asset/shuibiao')
@@ -30,6 +32,10 @@ logger = logging.getLogger(__name__)
 
 
 def init():
+    bot.set_my_commands(
+        ('question', '我们建议你配合调查'),
+        ('stat', '查水表统计')
+    )
     logger.info(f'Get question list from {questions_file}')
     with open(questions_file) as f:
         for line in f:
@@ -64,17 +70,17 @@ def question(update: Update, context: CallbackContext):
 def question_inline(update: Update, context: CallbackContext):
     def get_stats():
         total = sum(context.bot_data.values())
-        total_items = len(context.bot_data)
         result = f'据不完全统计，目前全网累计查水表次数: {total} 次。其中排名前 3 的语句为：\n'
-        top3 = sorted(list((-v, k) for k, v in context.bot_data.items()))[:min(3, total_items)]
-        for count, text in top3:
+        idx, pre_count = 0, 0
+        for count, text in sorted(list((-v, k) for k, v in context.bot_data.items())):
+            if idx >= 3 and count != pre_count:
+                break
             result += f"{text}: {-count} 次\n"
+            idx += 1
+            pre_count = -count
         return result
 
-    texts = random.sample(questions_list, 3)
-    stats = get_stats()
-
-    result = [
+    query_result = [
         InlineQueryResultArticle(
             id=hashlib.md5(text.encode()).hexdigest(),
             title='我们建议你配合调查',
@@ -82,18 +88,18 @@ def question_inline(update: Update, context: CallbackContext):
             input_message_content=InputTextMessageContent(text),
             thumb_url=f'{asset_url}/shuibiao.jpg'
         )
-        for text in texts
+        for text in random.sample(questions_list, 3)
     ]
-    result.append(
+    query_result.append(
         InlineQueryResultArticle(
             id='00000000000000000000000000000000',
             title='调查统计',
             description='据不完全统计，目前全网累计查水表次数……',
-            input_message_content=InputTextMessageContent(stats),
+            input_message_content=InputTextMessageContent(get_stats()),
             thumb_url=f'{asset_url}/shuibiao.jpg'
         )
     )
-    update.inline_query.answer(result, cache_time=0)
+    update.inline_query.answer(query_result, cache_time=0)
 
 
 def chosen_result(update: Update, context: CallbackContext):
@@ -102,6 +108,15 @@ def chosen_result(update: Update, context: CallbackContext):
         return
     text = questions_dict[result_id]
     context.bot_data[text] = context.bot_data.get(text, 0) + 1
+
+
+def stats(update: Update, context: CallbackContext):
+    total = sum(context.bot_data.values())
+    result = ""
+    for count, text in sorted(list((-v, k) for k, v in context.bot_data.items())):
+        result += f"{text}: {-count} 次\n"
+    result += f"共查水表 {total} 次。"
+    update.message.reply_text(result)
 
 
 def main():
@@ -115,6 +130,7 @@ def main():
     # add handler
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("question", question))
+    dp.add_handler(CommandHandler("stats", stats))
     dp.add_handler(InlineQueryHandler(question_inline))
     dp.add_handler(ChosenInlineResultHandler(chosen_result))
     # Start the Bot
