@@ -62,7 +62,18 @@ def question(update: Update, context: CallbackContext):
 
 
 def question_inline(update: Update, context: CallbackContext):
+    def get_stats():
+        total = sum(context.bot_data.values())
+        total_items = len(context.bot_data)
+        result = f'据不完全统计，目前全网累计查水表次数: {total} 次。其中排名前 3 的语句为：\n'
+        top3 = sorted(list((-v, k) for k, v in context.bot_data.items()))[:min(3, total_items)]
+        for count, text in top3:
+            result += f"{text}: {-count} 次\n"
+        return result
+
     texts = random.sample(questions_list, 3)
+    stats = get_stats()
+
     result = [
         InlineQueryResultArticle(
             id=hashlib.md5(text.encode()).hexdigest(),
@@ -73,22 +84,24 @@ def question_inline(update: Update, context: CallbackContext):
         )
         for text in texts
     ]
+    result.append(
+        InlineQueryResultArticle(
+            id='00000000000000000000000000000000',
+            title='调查统计',
+            description='据不完全统计，目前全网累计查水表次数……',
+            input_message_content=InputTextMessageContent(stats),
+            thumb_url=f'{asset_url}/shuibiao.jpg'
+        )
+    )
     update.inline_query.answer(result, cache_time=0)
 
 
 def chosen_result(update: Update, context: CallbackContext):
-    text = questions_dict[update.chosen_inline_result.result_id]
+    result_id = update.chosen_inline_result.result_id
+    if result_id == '00000000000000000000000000000000':
+        return
+    text = questions_dict[result_id]
     context.bot_data[text] = context.bot_data.get(text, 0) + 1
-
-
-def shuibiaostats(update: Update, context: CallbackContext):
-    total = sum(context.bot_data.values())
-    total_items = len(context.bot_data)
-    result = f'据不完全统计，目前全网累计查水表次数: {total} 次。其中排名前 3 的语句为：\n'
-    top3 = sorted(list((-v, k) for k, v in context.bot_data.items()))[:min(3, total_items)]
-    for count, text in top3:
-        result += f"{text}: {-count} 次\n"
-    update.message.reply_text(result)
 
 
 def main():
@@ -102,7 +115,6 @@ def main():
     # add handler
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("question", question))
-    dp.add_handler(CommandHandler("shuibiaostats", shuibiaostats))
     dp.add_handler(InlineQueryHandler(question_inline))
     dp.add_handler(ChosenInlineResultHandler(chosen_result))
     # Start the Bot
