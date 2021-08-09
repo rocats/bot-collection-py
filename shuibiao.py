@@ -6,6 +6,7 @@ import binascii
 import hashlib
 import logging
 import os
+import subprocess
 import random
 
 from telegram import Bot, Update, InlineQueryResultArticle, InputTextMessageContent
@@ -32,10 +33,6 @@ logger = logging.getLogger(__name__)
 
 
 def init():
-    bot.set_my_commands([
-        ('question', '我们建议你配合调查'),
-        ('stat', '查水表统计')
-    ])
     logger.info(f'Get question list from {questions_file}')
     with open(questions_file) as f:
         for line in f:
@@ -120,6 +117,10 @@ def stats(update: Update, context: CallbackContext):
 
 
 def main():
+    bot.set_my_commands([
+        ('question', '我们建议你配合调查'),
+        ('stats', '查水表统计')
+    ])
     persistence = PicklePersistence(filename=data_path)
     updater = Updater(token, use_context=True, persistence=persistence)
     dp = updater.dispatcher
