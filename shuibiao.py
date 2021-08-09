@@ -11,8 +11,8 @@ import random
 from telegram import Bot, Update, InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext.callbackcontext import CallbackContext
 from telegram.ext import Updater, CommandHandler, \
-                        InlineQueryHandler, ChosenInlineResultHandler,\
-                        PicklePersistence
+    InlineQueryHandler, ChosenInlineResultHandler, \
+    PicklePersistence
 
 token = os.getenv('TELEGRAM_APITOKEN')
 asset_url = os.getenv('ASSET_URL', 'https://raw.githubusercontent.com/rocats/bot-collection-py/master/asset/shuibiao')
@@ -32,10 +32,10 @@ logger = logging.getLogger(__name__)
 
 
 def init():
-    bot.set_my_commands(
+    bot.set_my_commands([
         ('question', '我们建议你配合调查'),
         ('stat', '查水表统计')
-    )
+    ])
     logger.info(f'Get question list from {questions_file}')
     with open(questions_file) as f:
         for line in f:
