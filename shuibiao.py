@@ -74,7 +74,7 @@ def question_inline(update: Update, context: CallbackContext):
                 break
             result += f"{text}: {-count} 次\n"
             idx += 1
-            pre_count = -count
+            pre_count = count
         return result
 
     query_result = [
