@@ -1,6 +1,8 @@
 .idea
 .vscode
 .env
+.venv
 data
+env
 venv
 __pycache__

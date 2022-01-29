@@ -1,0 +1,3 @@
+#!/bin/bash
+source ~/tg-bot/.venv/bin/activate
+exec python ~/tg-bot/"$(basename "$0").py"
