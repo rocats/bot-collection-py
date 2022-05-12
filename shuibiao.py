@@ -59,7 +59,7 @@ def question(update: Update, context: CallbackContext):
     chat_id = update.message.chat_id
     reply_to_message_id = update.message.reply_to_message.message_id \
         if update.message.reply_to_message else None
-    text = random.choice(questions_list)
+    text = random.choice(questions_list).strip()
     context.bot_data[text] = context.bot_data.get(text, 0) + 1
     context.bot.send_message(chat_id, text=text, reply_to_message_id=reply_to_message_id)
 
@@ -103,7 +103,7 @@ def chosen_result(update: Update, context: CallbackContext):
     result_id = update.chosen_inline_result.result_id
     if result_id == '00000000000000000000000000000000':
         return
-    text = questions_dict[result_id]
+    text = questions_dict[result_id].strip()
     context.bot_data[text] = context.bot_data.get(text, 0) + 1
 
 
