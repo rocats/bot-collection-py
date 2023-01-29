@@ -1,5 +1,0 @@
-#!/bin/bash -e
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-ROOT_DIR=$(dirname "$SCRIPT_DIR")
-. $ROOT_DIR/.venv/bin/activate
-exec python "$ROOT_DIR/$(basename "$0").py"
