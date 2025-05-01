@@ -79,7 +79,7 @@ async def question_inline(update: Update, context: CallbackContext) -> None:
             title='我们建议你配合调查',
             description=text,
             input_message_content=InputTextMessageContent(text),
-            thumb_url=f'{asset_url}/shuibiao.jpg'
+            thumbnail_url=f'{asset_url}/shuibiao.jpg'
         )
         for text in random.sample(questions_list, 3)
     ]
@@ -89,7 +89,7 @@ async def question_inline(update: Update, context: CallbackContext) -> None:
             title='调查统计',
             description='据不完全统计，目前全网累计查水表次数……',
             input_message_content=InputTextMessageContent(get_stats()),
-            thumb_url=f'{asset_url}/shuibiao.jpg'
+            thumbnail_url=f'{asset_url}/shuibiao.jpg'
         )
     )
     await update.inline_query.answer(query_result, cache_time=0)
