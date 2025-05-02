@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "python-telegram-bot~=22.0",
+# ]
+# ///
+
 # -*- coding: utf-8 -*-
 
 import asyncio
